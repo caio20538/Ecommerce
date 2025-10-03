@@ -15,11 +15,7 @@ import java.time.Duration;
 public class RestClientConfig {
 
     @Value("${inventory.url}")
-    private final String inventoryServiceUrl;
-
-    public RestClientConfig(String inventoryServiceUrl) {
-        this.inventoryServiceUrl = inventoryServiceUrl;
-    }
+    private String inventoryServiceUrl;
 
     @Bean
     public InventoryClient inventoryClient() {

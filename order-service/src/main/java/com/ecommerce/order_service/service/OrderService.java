@@ -1,24 +1,26 @@
 package com.ecommerce.order_service.service;
 
 import com.ecommerce.order_service.client.InventoryClient;
-import com.ecommerce.order_service.dto.OrderLineItemsDto;
 import com.ecommerce.order_service.dto.OrderRequest;
+import com.ecommerce.order_service.event.OrderPlacedEvent;
 import com.ecommerce.order_service.model.Order;
-import com.ecommerce.order_service.model.OrderLineItems;
 import com.ecommerce.order_service.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderService {
 
     private final OrderRepository orderRepository;
     private final InventoryClient inventoryClient;
+    private final KafkaTemplate<String, OrderPlacedEvent> kafkaTemplate;
 
     public void placeOrder(OrderRequest orderRequest){
         var isProductInStock = inventoryClient.isInStock(orderRequest.skuCode(), orderRequest.quantity());
@@ -33,6 +35,14 @@ public class OrderService {
         order.setQuantity(orderRequest.quantity());
 
         orderRepository.save(order);
+
+        //send message to kafka topic
+        //orderNumber and email
+        OrderPlacedEvent orderPlacedEvent = new OrderPlacedEvent(order.getOrderNumber(), orderRequest.userDetails().email());
+        log.info("Start - Sending orderPlacedEvent {} to kafka topic order-placed", orderPlacedEvent);
+        kafkaTemplate.send("order-placed", orderPlacedEvent);
+        log.info("End - Sending orderPlacedEvent {} to kafka topic order-placed", orderPlacedEvent);
+
     }
 
 }
